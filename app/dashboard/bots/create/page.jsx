@@ -326,7 +326,7 @@ export default function NewBotPage() {
               </span>
             </div>
             <div className="text-gray-500 mb-2">Give your bot a prompt</div>
-            <input
+            <textarea
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               placeholder="Example: You are an assistant that..."

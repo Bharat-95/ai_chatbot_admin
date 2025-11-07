@@ -229,7 +229,7 @@ export default function KnowledgeBaseLayout({ children }) {
       <div className="flex-1 overflow-y-auto">{children}</div>
 
       {showCreate && (
-        <div className="fixed inset-0 flex items-center justify-center bg-blue-700/40 z-50">
+        <div className="fixed inset-0 flex items-center justify-center bg-black/40 z-50">
           <div className="bg-white rounded-lg shadow p-6 w-full max-w-sm">
             <h3 className="text-base font-semibold mb-3">Create Folder</h3>
             <input value={newName} onChange={(e) => setNewName(e.target.value)} className="border rounded w-full px-3 py-2 outline-none" placeholder="Folder name" autoFocus />
