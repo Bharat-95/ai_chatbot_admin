@@ -7,19 +7,6 @@ import { Search, Send } from "lucide-react";
 import { supabaseBrowser } from "../../../../../lib/supabaseBrowser";
 import { showToast } from "@/hooks/useToast";
 
-/**
- * Chat page using `chats` table (messages stored as jsonb array inside chats.messages)
- *
- * Behavior:
- *  - find or create a chat row for (user_id, bot_id)
- *  - read messages from chats.messages
- *  - optimistic insert user message to UI; update chats.messages with new array
- *  - call webhook (n8n) to get assistant reply; append to chats.messages
- *  - subscribe to realtime updates for this chat to reflect external changes
- *
- * Note: This implementation reads the entire messages array and writes it back.
- * For heavy traffic you should implement server-side append logic (or RPC) to avoid race conditions.
- */
 
 export default function Page() {
   const params = useParams();
@@ -29,26 +16,23 @@ export default function Page() {
   const [bots, setBots] = useState([]);
   const [currentBot, setCurrentBot] = useState(null);
 
-  const [conversations, setConversations] = useState([]); // sidebar list of chats
+  const [conversations, setConversations] = useState([]); 
   const [loadingConvos, setLoadingConvos] = useState(false);
   const [loadingBots, setLoadingBots] = useState(false);
 
   const [convQuery, setConvQuery] = useState("");
 
-  // The active chat row
   const [chatId, setChatId] = useState(null);
-  const [chatRow, setChatRow] = useState(null); // full chat row { id, bot_id, user_id, messages, ... }
+  const [chatRow, setChatRow] = useState(null); 
 
-  // messages is the local UI array (sourced from chatRow.messages)
+
   const [messages, setMessages] = useState([]);
 
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const messagesRef = useRef(null);
 
-  // -----------------------
-  // Fetch user id
-  // -----------------------
+
   useEffect(() => {
     let mounted = true;
     (async () => {
@@ -65,9 +49,7 @@ export default function Page() {
     return () => (mounted = false);
   }, []);
 
-  // -----------------------
-  // Load bots (owned by user)
-  // -----------------------
+ 
   useEffect(() => {
     let mounted = true;
     const loadBots = async () => {
@@ -97,9 +79,7 @@ export default function Page() {
     return () => (mounted = false);
   }, [userId]);
 
-  // -----------------------
-  // Load sidebar chats (chats created_by = user_id)
-  // -----------------------
+ 
   useEffect(() => {
     let mounted = true;
     const loadChats = async () => {
@@ -130,9 +110,7 @@ export default function Page() {
     return () => (mounted = false);
   }, [userId]);
 
-  // -----------------------
-  // Derive currentBot from bots + botId param
-  // -----------------------
+ 
   useEffect(() => {
     if (!bots || !botId) {
       setCurrentBot(null);
@@ -142,14 +120,12 @@ export default function Page() {
     setCurrentBot(found);
   }, [bots, botId]);
 
-  // -----------------------
-  // Find or create a chat row for this user+bot
-  // -----------------------
+
   useEffect(() => {
     let mounted = true;
 
     const ensureChat = async () => {
-      // must have user & bot
+    
       if (!userId || !botId) {
         if (mounted) {
           setChatId(null);
@@ -160,7 +136,7 @@ export default function Page() {
       }
 
       try {
-        // 1) try find existing chat
+
         const { data: existing, error: exErr } = await supabaseBrowser
           .from("chats")
           .select("*")
@@ -183,13 +159,13 @@ export default function Page() {
           return;
         }
 
-        // 2) create new chat
+ 
         const title = `Conversation with ${currentBot?.name ?? botId}`;
         const payload = {
           bot_id: botId,
           user_id: userId,
           title,
-          messages: [], // default
+          messages: [], 
         };
 
         const { data: inserted, error: insertErr } = await supabaseBrowser
@@ -221,12 +197,10 @@ export default function Page() {
 
     ensureChat();
     return () => (mounted = false);
-    // include currentBot so that when name loads we can set title
+ 
   }, [userId, botId, currentBot]);
 
-  // -----------------------
-  // Subscribe to realtime updates for this chat to reflect external changes
-  // -----------------------
+ 
   useEffect(() => {
     let subscription = null;
     if (!chatId) return () => {};
@@ -238,7 +212,7 @@ export default function Page() {
           "postgres_changes",
           { event: "UPDATE", schema: "public", table: "chats", filter: `id=eq.${chatId}` },
           (payload) => {
-            // payload.record contains updated row
+         
             const row = payload?.record;
             if (!row) return;
             setChatRow(row);
@@ -255,12 +229,10 @@ export default function Page() {
     };
   }, [chatId]);
 
-  // -----------------------
-  // Scroll to bottom on messages change
-  // -----------------------
+ 
   useEffect(() => {
     if (!messagesRef.current) return;
-    // small timeout to let DOM render
+ 
     setTimeout(() => {
       try {
         messagesRef.current.scrollTop = messagesRef.current.scrollHeight;
@@ -268,25 +240,21 @@ export default function Page() {
     }, 50);
   }, [messages]);
 
-  // -----------------------
-  // Sidebar filter helper
-  // -----------------------
+
   const filteredConversations = useMemo(() => {
     const q = convQuery.trim().toLowerCase();
     if (!q) return conversations;
     return conversations.filter((c) => (c.title || "").toLowerCase().includes(q));
   }, [convQuery, conversations]);
 
-  // -----------------------
-  // sendMessage: optimistic user message -> patch chat.messages -> call webhook -> append assistant reply
-  // -----------------------
+
   const sendMessage = async () => {
     if (!input.trim() || !userId || !botId || !chatId) return;
     setSending(true);
     const userContent = input.trim();
     setInput("");
 
-    // optimistic message object
+  
     const optimisticUser = {
       id: `local-${Date.now()}`,
       role: "user",
@@ -294,11 +262,11 @@ export default function Page() {
       created_at: new Date().toISOString(),
     };
 
-    // update UI immediately
+   
     setMessages((prev) => [...prev, optimisticUser]);
 
     try {
-      // 1) fetch current messages from DB (to reduce chance of overwriting changes)
+    
       const { data: currentRows, error: fetchErr } = await supabaseBrowser
         .from("chats")
         .select("messages")
@@ -313,7 +281,7 @@ export default function Page() {
         ? currentRows.messages
         : chatRow?.messages || [];
 
-      // build new messages array with user message appended
+      
       const newUserMessage = {
         id: crypto?.randomUUID?.() ?? `msg-${Date.now()}`,
         role: "user",
@@ -322,14 +290,14 @@ export default function Page() {
       };
       const afterUser = [...currentMessages, newUserMessage];
 
-      // 2) update chat row with appended user message (messages, last_message_at, updated_at)
+    
       const { error: updateUserErr } = await supabaseBrowser
         .from("chats")
         .update({
           messages: afterUser,
           last_message_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
-          // optional: update title to first user message snippet
+         
           title: newUserMessage.content?.slice(0, 120) ?? null,
         })
         .eq("id", chatId);
@@ -338,12 +306,12 @@ export default function Page() {
         console.error("update chat with user message failed", updateUserErr);
         showToast({ type: "error", title: "Save failed", description: "Couldn't save your message to chat." });
       } else {
-        // update local chatRow/messages to reflect DB state (will also be updated by realtime subscription)
+       
         setChatRow((prev) => prev ? { ...prev, messages: afterUser, last_message_at: new Date().toISOString(), updated_at: new Date().toISOString() } : prev);
         setMessages(afterUser);
       }
 
-      // 3) call webhook for assistant reply
+    
       let replyText = null;
       try {
         const webhookResp = await fetch("https://n8n.srv1028016.hstgr.cloud/webhook/AI-Chatbot-Message", {
@@ -354,8 +322,7 @@ export default function Page() {
             bot_id: botId,
             user_id: userId,
             message: userContent,
-            // you can add more context: chat messages, bot prompt, etc, if you want
-            // messages: afterUser
+          
           }),
         });
 
@@ -363,7 +330,7 @@ export default function Page() {
           console.warn("webhook non-ok", webhookResp.status);
         } else {
           const json = await webhookResp.json();
-          // try common fields; adapt to your webhook's actual shape
+    
           replyText = json?.reply ?? json?.message ?? json?.response ?? null;
         }
       } catch (webErr) {
@@ -374,7 +341,7 @@ export default function Page() {
         replyText = "Assistant did not respond (webhook failed).";
       }
 
-      // 4) append assistant reply to messages and update chat row
+     
       const assistantMessage = {
         id: crypto?.randomUUID?.() ?? `assistant-${Date.now()}`,
         role: "assistant",
@@ -394,7 +361,7 @@ export default function Page() {
 
       if (updateAssistantErr) {
         console.error("update chat with assistant failed", updateAssistantErr);
-        // show local assistant message so user sees reply even if DB save failed
+    
         setMessages((prev) => [...prev, assistantMessage]);
         showToast({ type: "error", title: "Partial", description: "Assistant replied but saving failed." });
       } else {
@@ -409,7 +376,7 @@ export default function Page() {
     }
   };
 
-  // send on Enter
+
   const handleKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -417,9 +384,7 @@ export default function Page() {
     }
   };
 
-  // -----------------------
-  // UI
-  // -----------------------
+
   return (
     <div className="flex bg-white min-h-[90vh]">
       {/* Sidebar */}
