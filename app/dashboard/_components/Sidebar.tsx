@@ -29,7 +29,10 @@ import {
   WalletMinimal,
   FileText,
   File,
-  Globe
+  Globe,
+  Library,
+  MessageSquareText,
+  ChartNoAxesColumn
 } from "lucide-react";
 import Image from "next/image";
 
@@ -75,20 +78,32 @@ export default function Sidebar({ collapsed }: SidebarProps) {
           },
         ]
       : []),
+     { href: "/dashboard/bots", icon: Bot, title: "Bots" },
+    {
+      title: "Knowledge Base",
+      href: "/dashboard/knowledge-base",
+      icon: Library,
+    },
     {
       title: "Manage Subscription",
       href: "/dashboard/subscription",
       icon: CreditCard,
     },
-   
-    
+
+     { href: "/dashboard/chat", icon: MessageSquareText, title: "Chat" },
+
+    { href: "/dashboard/logs", icon: ChartNoAxesColumn, title: "Logs" },
+
     { title: "Reports", href: "/dashboard/reports", icon: BarChart3 },
-       { title: "Leads", href: "/dashboard/leads", icon: FileText },
-     { title: "Subscriptions", href: "/dashboard/subscription-plans", icon: WalletMinimal },
-     { title: "Invoices", href: "/dashboard/invoices", icon: File },
-     { title: "Promo Code", href: "/dashboard/promo-code", icon: Code },
+    { title: "Leads", href: "/dashboard/leads", icon: FileText },
+    {
+      title: "Subscriptions",
+      href: "/dashboard/subscription-plans",
+      icon: WalletMinimal,
+    },
+    { title: "Invoices", href: "/dashboard/invoices", icon: File },
+    { title: "Promo Code", href: "/dashboard/promo-code", icon: Code },
     { title: "Contact Us", href: "/dashboard/contactus", icon: Mail },
-    { title: "Webhook", href: "/dashboard/webhook", icon: Globe },
     { title: "Recycle", href: "/dashboard/recycle", icon: Recycle },
   ];
 
@@ -101,20 +116,21 @@ export default function Sidebar({ collapsed }: SidebarProps) {
     >
       {/* ────────────────── BRAND ────────────────── */}
       <div className="px-3 py-3 border-b border-gray-300 flex items-center justify-start">
-            <Image src='/LOGO.png' alt="No Logo Found"  
-              // Show smaller logo when collapsed (desktop or mobile)
-              width={collapsed ? 40 : 40}
-              height={collapsed ? 40 : 40}
-              className="object-contain max-h-[50px] text-[#2563EB]"
-            />
-           
-            {!collapsed && (
-              <span className="ml-3 text-md font-semibold text-gray-800">
-               FB Marketplace Chatbot
-              </span>
-            )}
-          </div>
+        <Image
+          src="/bot.png"
+          alt="No Logo Found"
+          // Show smaller logo when collapsed (desktop or mobile)
+          width={collapsed ? 40 : 40}
+          height={collapsed ? 40 : 40}
+          className="object-contain max-h-[50px] text-[#2563EB]"
+        />
 
+        {!collapsed && (
+          <span className="ml-3 text-md font-semibold text-gray-800">
+            Ai Chatbot
+          </span>
+        )}
+      </div>
 
       {/* ────────────────── NAV LINKS ────────────────── */}
       <nav className="flex-1 mt-6 overflow-y-auto">

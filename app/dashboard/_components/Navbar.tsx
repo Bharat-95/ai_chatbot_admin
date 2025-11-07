@@ -30,10 +30,10 @@ const pathName: any = {
   "/dashboard/admin": "Admin Management",
   "/dashboard/users/[id]/edit": "Edit User Details",
   "/dashboard/subscription-plans": "Subscription Plans",
-   "/dashboard/users/[id]/leads": "Edit Leads",
-   "/dashboard/leads" :"Leads",
-   "/dashboard/invoices":"Invoices",
-   "/dashboard/webhook":"Webhook"
+  "/dashboard/users/[id]/leads": "Edit Leads",
+  "/dashboard/leads": "Leads",
+  "/dashboard/invoices": "Invoices",
+  "/dashboard/webhook": "Webhook",
 };
 
 const Navbar = ({ setCollapsed, collapsed }: NavbarProps) => {
@@ -56,7 +56,7 @@ const Navbar = ({ setCollapsed, collapsed }: NavbarProps) => {
       const { data, error, count } = await supabaseBrowser
         .from("users")
         .select("*", { count: "exact" })
-         .eq("role", "user")
+        .eq("role", "user")
         .order("created_at", { ascending: false });
       if (error) {
         throw new Error("Something went wrong!");
@@ -69,25 +69,25 @@ const Navbar = ({ setCollapsed, collapsed }: NavbarProps) => {
       });
     }
   };
+
   const handleExportAdminFile = async () => {
-  try {
-    const { data, error, count } = await supabaseBrowser
-      .from("users")
-      .select("*", { count: "exact" })
-      .neq("role", "user") // 👈 exclude normal users
-      .order("created_at", { ascending: false });
+    try {
+      const { data, error, count } = await supabaseBrowser
+        .from("users")
+        .select("*", { count: "exact" })
+        .neq("role", "user")
+        .order("created_at", { ascending: false });
 
-    if (error) throw new Error("Something went wrong!");
+      if (error) throw new Error("Something went wrong!");
 
-    await exportToExcel(data, "admins");
-  } catch (error) {
-    showToast({
-      title: "Error",
-      description: "Something went wrong!",
-    });
-  }
-};
-
+      await exportToExcel(data, "admins");
+    } catch (error) {
+      showToast({
+        title: "Error",
+        description: "Something went wrong!",
+      });
+    }
+  };
 
   const handleExportSubscriptionFile = async () => {
     try {
@@ -146,8 +146,6 @@ const Navbar = ({ setCollapsed, collapsed }: NavbarProps) => {
       });
     }
   };
-
-  
 
   useEffect(() => {
     const fetchUserRole = async () => {
@@ -318,7 +316,6 @@ const Navbar = ({ setCollapsed, collapsed }: NavbarProps) => {
     }
   };
 
-  // New handler for exporting reports
   const handleExportReports = async () => {
     try {
       const { data, error } = await supabaseBrowser
@@ -328,7 +325,6 @@ const Navbar = ({ setCollapsed, collapsed }: NavbarProps) => {
       if (error) {
         throw new Error("Something went wrong fetching reports!");
       }
-      // Prepare the data for export by flattening the JSON objects
       const flattenedData = data.map((report) => ({
         id: report.id,
         name: report.name,
@@ -361,7 +357,7 @@ const Navbar = ({ setCollapsed, collapsed }: NavbarProps) => {
       return await handleExportUserFile();
     } else if (pathname === "/dashboard/subscription") {
       await handleExportSubscriptionFile();
-      }  else if (pathname === "/dashboard/admin") {
+    } else if (pathname === "/dashboard/admin") {
       return await handleExportAdminFile();
     } else if (pathname === "/dashboard/invoices") {
       await handleExportInvoiceFile();
@@ -377,7 +373,6 @@ const Navbar = ({ setCollapsed, collapsed }: NavbarProps) => {
       await handleExportToolFile();
     } else if (pathname === "/dashboard/recycle") {
       await handleExportRecycleBinFile();
-      
     } else if (pathname === "/dashboard/details") {
       const codeType = localStorage.getItem("subRoute");
       if (codeType === "registration") {
@@ -409,7 +404,6 @@ const Navbar = ({ setCollapsed, collapsed }: NavbarProps) => {
           {(() => {
             let title = pathName[pathname] || "";
 
-            // Handle User Subscription page
             if (
               pathname.startsWith("/dashboard/users/") &&
               pathname.split("/").length === 4
@@ -417,18 +411,48 @@ const Navbar = ({ setCollapsed, collapsed }: NavbarProps) => {
               title = pathName["/dashboard/users/[id]"];
             }
 
-            // Handle Edit User page
             if (
               pathname.startsWith("/dashboard/users/") &&
               pathname.endsWith("/edit")
             ) {
               title = pathName["/dashboard/users/[id]/edit"];
             }
-              if (
+
+            if (
               pathname.startsWith("/dashboard/users/") &&
               pathname.endsWith("/leads")
             ) {
               title = pathName["/dashboard/users/[id]/leads"];
+            }
+
+            if (pathname === "/dashboard/knowledge-base") {
+              return "Knowledge Base";
+            }
+
+            if (
+              pathname.startsWith("/dashboard/knowledge-base/") &&
+              pathname.endsWith("/upload")
+            ) {
+              return "Upload Document";
+            }
+
+            if (
+              pathname.startsWith("/dashboard/knowledge-base/") &&
+              pathname.endsWith("/website")
+            ) {
+              return "Import Website";
+            }
+
+            const kbCreate =
+              pathname === "/dashboard/knowledge-base/create" ||
+              pathname.endsWith("/create");
+            if (kbCreate) {
+              return "Create Document";
+            }
+
+            const kbUuidRegex = /^\/dashboard\/knowledge-base\/[0-9a-fA-F\-]{36}$/;
+            if (kbUuidRegex.test(pathname)) {
+              return "Knowledge Base";
             }
 
             if (pathname === "/dashboard" && userRole) {

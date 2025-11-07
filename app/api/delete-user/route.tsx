@@ -9,7 +9,7 @@ export async function POST(req: NextRequest) {
     }
 
     const res = await fetch(
-      "https://pkhjjuyhuwsuulxdavld.supabase.co/functions/v1/delete-user",
+      "https://hjofholmamrathafloam.supabase.co/functions/v1/delete-user",
       {
         method: "POST",
         headers: {
