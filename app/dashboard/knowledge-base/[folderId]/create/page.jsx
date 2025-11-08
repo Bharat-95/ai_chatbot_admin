@@ -865,7 +865,7 @@ export default function CreateDocumentInline({
 
       const insertPayload = {
         doc_name: title,
-        status: "saved",
+        status: "uploaded",
         document_id: docId,
         folderId: targetFolderId,
         userId: userId || null,
@@ -933,15 +933,26 @@ export default function CreateDocumentInline({
       onSaved && onSaved({ ...docData, lastSavedHtml: htmlContent });
 
       try {
+   
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(
+            new CustomEvent("kb:doc-created", {
+              detail: { folderId: targetFolderId || null },
+            })
+          );
+        }
+      } catch (e) {
+        console.warn("dispatch kb:doc-created failed", e);
+      }
+
+      try {
         setTitle("");
         setImageModalInitial(null);
         setShowImageModal(false);
-        
 
         if (editor && editor.commands && editor.commands.setContent) {
-        
           editor.commands.setContent('<p style="color:#111827;"></p>');
-    
+
           editor.commands.focus && editor.commands.focus();
         }
       } catch (resetErr) {

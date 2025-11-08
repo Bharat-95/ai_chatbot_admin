@@ -5,6 +5,7 @@ import { supabaseBrowser } from "../../../../lib/supabaseBrowser";
 import { showToast } from "../../../../hooks/useToast";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 export default function NewBotPage() {
   const [name, setName] = useState("");
@@ -18,6 +19,8 @@ export default function NewBotPage() {
   const [saving, setSaving] = useState(false);
   const [userId, setUserId] = useState(null);
   const [error, setError] = useState(null);
+  const router = useRouter();
+
 
   useEffect(() => {
     let mounted = true;
@@ -44,14 +47,14 @@ export default function NewBotPage() {
         if (!mounted) return;
         setUserId(uid);
 
-        // If no user, set empty list and return
+      
         if (!uid) {
           setKbList([]);
           setLoadingKb(false);
           return;
         }
 
-        // fetch only this user's knowledge_base rows
+       
         const { data, error: fetchErr } = await supabaseBrowser
           .from("knowledge_base")
           .select("folder,folder_id,docs,user_id")
@@ -64,7 +67,7 @@ export default function NewBotPage() {
           setKbList([]);
         } else {
           setKbList(data || []);
-          // if useAll was checked (unlikely on first load) keep selected in sync
+         
           if (useAll && Array.isArray(data)) {
             setSelected(data.slice());
           }
@@ -82,11 +85,10 @@ export default function NewBotPage() {
     return () => {
       mounted = false;
     };
-    // run once on mount
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, []);
 
-  // When useAll toggles or kbList changes while useAll=true, update selected list
+  
   useEffect(() => {
     if (useAll) {
       setSelected(kbList.slice());
@@ -259,6 +261,7 @@ export default function NewBotPage() {
       setPrompt("");
       setSelected([]);
       setUseAll(false);
+        router.push("/dashboard/bots");
     } catch (e) {
       console.error("create bot unexpected error:", e);
       showToast({

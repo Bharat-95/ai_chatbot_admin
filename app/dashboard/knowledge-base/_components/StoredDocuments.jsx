@@ -385,6 +385,21 @@ export default function StoredDocuments({
       // close the menu explicitly after successful delete
       closeMenu();
 
+      try {
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(
+            new CustomEvent("kb:doc-deleted", {
+              detail: {
+                folderId: folderId || null,
+                docId: doc.id,
+              },
+            })
+          );
+        }
+      } catch (e) {
+        console.warn("dispatch kb:doc-deleted failed", e);
+      }
+
       showToast({
         type: "success",
         title: "Success",
@@ -544,7 +559,7 @@ export default function StoredDocuments({
                     <td className="py-3 px-4">
                       <span
                         className={`px-2 py-1 text-xs rounded-full font-medium ${
-                          status.toLowerCase() === "done" || status.toLowerCase() === "learned"
+                          status.toLowerCase() === "done" || status.toLowerCase() === "uploaded"
                             ? "bg-green-50 text-green-700"
                             : "bg-gray-100 text-gray-500"
                         }`}
@@ -582,7 +597,7 @@ export default function StoredDocuments({
       {/* Rename Modal */}
       {renameFor &&
         createPortal(
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-blue-700/40">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
             <div className="bg-white rounded-xl p-6 w-full max-w-md">
               <h3 className="text-lg font-semibold mb-3">Rename Document</h3>
               <input
@@ -615,7 +630,7 @@ export default function StoredDocuments({
       {/* Change Folder Modal */}
       {changeFolderFor &&
         createPortal(
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-blue-700/40">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
             <div className="bg-white rounded-xl p-6 w-full max-w-md">
               <h3 className="text-lg font-semibold mb-3">
                 Select New Folder for {changeFolderFor.doc_name || changeFolderFor.file_name}
@@ -656,7 +671,7 @@ export default function StoredDocuments({
 
       {/* HTML / Inline Preview Modal */}
       {previewDoc && createPortal(
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-blue-700/60">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
           <div className="bg-white rounded-lg w-[90%] max-w-4xl h-[80%] overflow-hidden relative">
             <div className="flex items-center justify-between p-3 border-b">
               <div className="flex items-center gap-3">

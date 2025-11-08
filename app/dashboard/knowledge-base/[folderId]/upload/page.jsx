@@ -184,19 +184,21 @@ export default function UploadAreaWithList({
         ""
       )}/storage/v1/object/public/${BUCKET}/${encodeURIComponent(path)}`;
 
+
       const docPayload = {
         doc_name: item.name,
-        status: "learned",
+        status: "uploaded",
         folderId: folderId,
         userId: user.id,
         type: "upload",
-        doc_path: path,
+        doc_path: path, 
+        doc_url: publicUrl, 
         file_type: item.file.type || extFromName(item.name).replace(".", ""),
         file_size: item.size || null,
         doc_content: null,
-        doc_url: null,
       };
 
+     
       try {
         await fetch(
           "https://n8n.srv1028016.hstgr.cloud/webhook/AI-Chatbot-KnowledgeBase",
@@ -210,12 +212,13 @@ export default function UploadAreaWithList({
         console.error("Webhook call failed:", webhookError);
       }
 
+    
       const { error: insertError } = await supabaseBrowser
         .from("documents")
         .insert([docPayload]);
 
       if (insertError) {
-        // still add to UI even if DB insert failed
+      
         setItems((prev) =>
           prev.map((p) =>
             p.id === item.id
@@ -238,6 +241,24 @@ export default function UploadAreaWithList({
         if (onUploaded)
           onUploaded([{ ...item, status: "done", path, publicUrl }]);
       }
+
+      try {
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(
+            new CustomEvent("kb:doc-created", {
+              detail: {
+                folderId: folderId || null,
+                fileName: item.name,
+                path,
+                publicUrl,
+              },
+            })
+          );
+        }
+      } catch (e) {
+        console.warn("dispatch kb:doc-created failed", e);
+      }
+
       showToast({
         title: "Success",
         description: "Document Uploaded successfully.",

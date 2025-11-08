@@ -103,7 +103,7 @@ export default function ImportWebsite({ folderId: folderIdProp = null }) {
     try {
       const payload = {
         doc_name: docName.trim(),
-        status: "learned",
+        status: "uploaded",
         type: "website",
         doc_url: url.trim(),
         doc_content: JSON.stringify({
@@ -152,6 +152,22 @@ export default function ImportWebsite({ folderId: folderIdProp = null }) {
         setDocName("");
         setRecurring("once");
         setListKey((k) => k + 1);
+        try {
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent("kb:doc-created", {
+          detail: {
+            folderId: folderId || null,
+            docName: docName.trim(),
+            type: "website",
+            doc_url: url.trim(),
+          },
+        })
+      );
+    }
+  } catch (e) {
+    console.warn("dispatch kb:doc-created failed", e);
+  }
       }
     } catch {
       showToast({
