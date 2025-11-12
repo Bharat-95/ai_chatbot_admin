@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { supabaseBrowser } from "../../../lib/supabaseBrowser";
+import { showToast } from "@/hooks/useToast";
 
 export default function KnowledgeBaseLayout({ children }) {
   const sidebarRef = useRef(null);
@@ -66,15 +67,100 @@ export default function KnowledgeBaseLayout({ children }) {
 
   const createFolder = async () => {
     if (!newName.trim() || !userId) return;
-    const payload = { user_id: userId, folder: newName.trim() };
-    const { data } = await supabaseBrowser
-      .from("knowledge_base")
-      .insert([payload])
-      .select()
-      .single();
-    if (data) setFolders((prev) => [data, ...prev]);
-    setShowCreate(false);
-    setNewName("");
+    const folderName = newName.trim();
+
+    try {
+      // check case-insensitive duplicate for this user
+      const { data: existing, error: checkErr } = await supabaseBrowser
+        .from("knowledge_base")
+        .select("folder_id")
+        .ilike("folder", folderName) // case-insensitive match
+        .eq("user_id", userId)
+        .limit(1)
+        .maybeSingle();
+
+      if (checkErr) {
+        console.warn("duplicate-check failed", checkErr);
+        showToast({
+          title: "Error",
+          description: "Unable to verify folder name.",
+          type: "error",
+        });
+        return;
+      }
+
+      if (existing) {
+        showToast({
+          title: "Duplicate folder",
+          description: "A folder with this name already exists.",
+          type: "error",
+        });
+        return;
+      }
+
+      // proceed to create
+      const payload = { user_id: userId, folder: folderName };
+      const { data, error } = await supabaseBrowser
+        .from("knowledge_base")
+        .insert([payload])
+        .select()
+        .single();
+
+      if (error) {
+        // handle unique constraint / conflict gracefully
+        const isConflict =
+          error?.code === "23505" ||
+          error?.status === 409 ||
+          (error?.message && error.message.toLowerCase().includes("unique")) ||
+          (error?.details && error.details.toLowerCase().includes("unique"));
+
+        if (isConflict) {
+          showToast({
+            title: "Duplicate folder",
+            description: "A folder with this name already exists.",
+            type: "error",
+          });
+          return;
+        }
+
+        showToast({
+          title: "Error",
+          description: error.message || "Failed to create folder.",
+          type: "error",
+        });
+        return;
+      }
+
+      if (data) {
+        setFolders((prev) => [data, ...prev]);
+        setShowCreate(false);
+        setNewName("");
+        showToast({
+          title: "Created",
+          description: "Folder created successfully.",
+          type: "success",
+        });
+      }
+    } catch (err) {
+      console.error("createFolder error", err);
+      const status = err?.status || (err?.response && err.response.status);
+      if (
+        status === 409 ||
+        (err?.message && err.message.toLowerCase().includes("conflict"))
+      ) {
+        showToast({
+          title: "Duplicate folder",
+          description: "A folder with this name already exists.",
+          type: "error",
+        });
+      } else {
+        showToast({
+          title: "Error",
+          description: "Failed to create folder.",
+          type: "error",
+        });
+      }
+    }
   };
 
   const openMenu = (id) => {
@@ -93,27 +179,85 @@ export default function KnowledgeBaseLayout({ children }) {
     setRenameValue(folder.folder || "");
   };
 
-  const submitRename = async () => {
-    const id = renameModalFor;
-    if (!id || !renameValue.trim()) return;
-    setActionLoadingFor(id);
-    try {
-      const { data, error } = await supabaseBrowser
-        .from("knowledge_base")
-        .update({ folder: renameValue.trim() })
-        .eq("folder_id", id)
-        .select()
-        .single();
-      if (!error && data)
-        setFolders((prev) => prev.map((f) => (f.folder_id === id ? data : f)));
+const submitRename = async () => {
+  const id = renameModalFor;
+  if (!id || !renameValue.trim()) return;
+  setActionLoadingFor(id);
+
+  try {
+    const newName = renameValue.trim();
+
+    if (!userId) {
+      showToast({ title: "Error", description: "User not authenticated.", type: "error" });
+      setActionLoadingFor(null);
+      return;
+    }
+
+    const { data: existing, error: checkErr } = await supabaseBrowser
+      .from("knowledge_base")
+      .select("folder_id")
+      .ilike("folder", newName)
+      .eq("user_id", userId)
+      .neq("folder_id", id)
+      .limit(1)
+      .maybeSingle();
+
+    if (checkErr) {
+      console.warn("duplicate-check failed", checkErr);
+      showToast({ title: "Error", description: "Unable to verify folder name.", type: "error" });
+      setActionLoadingFor(null);
+      return;
+    }
+
+    if (existing) {
+      showToast({ title: "Duplicate folder", description: "A folder with this name already exists.", type: "error" });
+      setActionLoadingFor(null);
+      return;
+    }
+
+    const { data, error } = await supabaseBrowser
+      .from("knowledge_base")
+      .update({ folder: newName })
+      .eq("folder_id", id)
+      .select()
+      .single();
+
+    if (error) {
+      const isConflict =
+        error?.code === "23505" ||
+        error?.status === 409 ||
+        (error?.message && error.message.toLowerCase().includes("unique")) ||
+        (error?.details && error.details.toLowerCase().includes("unique"));
+
+      if (isConflict) {
+        showToast({ title: "Duplicate folder", description: "A folder with this name already exists.", type: "error" });
+        setActionLoadingFor(null);
+        return;
+      }
+
+      showToast({ title: "Error", description: error.message || "Failed to rename folder.", type: "error" });
+      setActionLoadingFor(null);
+      return;
+    }
+
+    if (data) {
+      setFolders((prev) => prev.map((f) => (f.folder_id === id ? data : f)));
       setRenameModalFor(null);
       setRenameValue("");
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setActionLoadingFor(null);
+      showToast({ title: "Updated", description: "Folder renamed.", type: "success" });
     }
-  };
+  } catch (err) {
+    console.error(err);
+    const status = err?.status || (err?.response && err.response.status);
+    if (status === 409 || (err?.message && err.message.toLowerCase().includes("conflict"))) {
+      showToast({ title: "Duplicate folder", description: "A folder with this name already exists.", type: "error" });
+    } else {
+      showToast({ title: "Error", description: "Rename failed.", type: "error" });
+    }
+  } finally {
+    setActionLoadingFor(null);
+  }
+};
 
   const startDeleteInline = (folder) => {
     setDeletePendingFor(folder.folder_id);
@@ -437,7 +581,7 @@ export default function KnowledgeBaseLayout({ children }) {
       )}
 
       {renameModalFor && (
-        <div className="fixed inset-0 flex items-center justify-center bg-blue-700/40 z-50">
+        <div className="fixed inset-0 flex items-center justify-center bg-black/40 z-50">
           <div className="bg-white rounded-lg shadow p-6 w-full max-w-md">
             <h3 className="text-lg font-semibold mb-3">Rename Folder</h3>
             <input
