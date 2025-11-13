@@ -229,7 +229,7 @@ export default function EditBotPage() {
               <span className="font-medium text-gray-900">Bot Prompt <span className="text-red-500">*</span></span>
             </div>
             <div className="text-gray-500 mb-2">Give your bot a prompt</div>
-            <input value={prompt} onChange={(e) => setPrompt(e.target.value)} placeholder="Example: You are an assistant that..." className="w-full rounded-lg border border-gray-200 px-4 py-3 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#9966cc]" style={{ boxShadow: "none", borderColor: "#e6e9ee" }} />
+            <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} placeholder="Example: You are an assistant that..." className="w-full rounded-lg border border-gray-200 px-4 py-3 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#9966cc]" style={{ boxShadow: "none", borderColor: "#e6e9ee" }} />
           </label>
         </section>
 
