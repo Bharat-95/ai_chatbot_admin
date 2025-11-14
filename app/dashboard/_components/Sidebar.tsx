@@ -32,7 +32,8 @@ import {
   Globe,
   Library,
   MessageSquareText,
-  ChartNoAxesColumn
+  ChartNoAxesColumn,
+  NotebookText
 } from "lucide-react";
 import Image from "next/image";
 
@@ -83,6 +84,11 @@ export default function Sidebar({ collapsed }: SidebarProps) {
       title: "Knowledge Base",
       href: "/dashboard/knowledge-base",
       icon: Library,
+    },
+      {
+      title: "Quiz",
+      href: "/dashboard/quiz",
+      icon: NotebookText,
     },
     {
       title: "Manage Subscription",
