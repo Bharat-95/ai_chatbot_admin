@@ -41,7 +41,9 @@ export default function EditBotPage() {
             const u = supabaseBrowser.auth.user();
             uid = u?.id ?? null;
           }
-        } catch (e) {}
+        } catch (e) {
+          console.error(e);
+        }
 
         if (!mounted) return;
         setUserId(uid);
@@ -50,6 +52,26 @@ export default function EditBotPage() {
           setError("Missing bot id");
           setLoading(false);
           return;
+        }
+
+        const { data: botData, error: botErr } = await supabaseBrowser
+          .from("bots")
+          .select("*")
+          .eq("bot_id", botId)
+          .maybeSingle();
+
+        if (botErr) {
+          console.error(botErr);
+          setError("Failed to load bot");
+          setLoading(false);
+          return;
+        }
+
+        if (mounted && botData) {
+          setName(botData.name ?? "");
+          setDesc(botData.description ?? "");
+          setPrompt(botData.prompt ?? "");
+          setUseAll(!!botData.use_all_kb);
         }
 
         const { data: kbData, error: kbErr } = await supabaseBrowser
@@ -65,7 +87,10 @@ export default function EditBotPage() {
           .eq("user_id", uid)
           .order("updated_at", { ascending: false });
 
-        if (!kbErr && Array.isArray(kbData)) {
+        if (kbErr) {
+          console.error(kbErr);
+          if (mounted) setKbList([]);
+        } else if (Array.isArray(kbData)) {
           const normalized = kbData.map((k) => ({
             folder: k.folder,
             folder_id: k.folder_id,
@@ -73,24 +98,24 @@ export default function EditBotPage() {
             docs: k.documents?.[0]?.count ?? 0,
           }));
 
-          setKbList(normalized);
+          if (mounted) setKbList(normalized);
 
-          if (
-            Array.isArray(botData.kb_folder_ids) &&
-            botData.kb_folder_ids.length > 0
-          ) {
-            const preselected = normalized.filter((k) =>
-              botData.kb_folder_ids.includes(k.folder_id)
-            );
-            setSelected(preselected);
-          } else if (botData.use_all_kb) {
-            setSelected(normalized.slice());
-          } else {
-            setSelected([]);
+          if (mounted) {
+            if (Array.isArray(botData?.kb_folder_ids) && botData.kb_folder_ids.length > 0) {
+              const preselected = normalized.filter((k) =>
+                botData.kb_folder_ids.includes(k.folder_id)
+              );
+              setSelected(preselected);
+            } else if (botData?.use_all_kb) {
+              setSelected(normalized.slice());
+            } else {
+              setSelected([]);
+            }
           }
         }
       } catch (e) {
-        setError("Unexpected error");
+        console.error(e);
+        if (mounted) setError("Unexpected error");
       } finally {
         if (mounted) setLoading(false);
       }
@@ -173,6 +198,7 @@ export default function EditBotPage() {
         .single();
 
       if (updErr) {
+        console.error(updErr);
         setError("Failed to update bot");
         setSaving(false);
         return;
@@ -185,6 +211,7 @@ export default function EditBotPage() {
       });
       router.push("/dashboard/bots");
     } catch (e) {
+      console.error(e);
       setError("Unexpected error while saving");
     } finally {
       setSaving(false);
@@ -239,9 +266,7 @@ export default function EditBotPage() {
             <div className="mb-2">
               <span className="font-medium text-gray-900">Bot Description</span>
             </div>
-            <div className="text-gray-500 mb-2">
-              Leave empty to auto-generate an apt description.
-            </div>
+            <div className="text-gray-500 mb-2">Leave empty to auto-generate an apt description.</div>
             <textarea
               value={desc}
               onChange={(e) => setDesc(e.target.value)}
@@ -270,9 +295,7 @@ export default function EditBotPage() {
 
         <section className="mb-8">
           <h3 className="text-lg font-semibold mb-2">Knowledge Base</h3>
-          <p className="text-sm text-gray-500 mb-4">
-            Select the folders the bot can use as its knowledge base.
-          </p>
+          <p className="text-sm text-gray-500 mb-4">Select the folders the bot can use as its knowledge base.</p>
 
           <div className="border border-gray-200 rounded-lg overflow-hidden">
             <div className="p-4 border-b border-gray-200 flex items-center justify-between">
@@ -316,9 +339,7 @@ export default function EditBotPage() {
 
                 <div className="space-y-2 max-h-72 overflow-auto">
                   {kbList.length === 0 && (
-                    <div className="text-sm text-gray-500">
-                      No folders found.
-                    </div>
+                    <div className="text-sm text-gray-500">No folders found.</div>
                   )}
                   {foldersToShow.map((f) => (
                     <div
@@ -337,12 +358,8 @@ export default function EditBotPage() {
                           {isSelected(f.folder_id) ? "✓" : "+"}
                         </button>
                         <div>
-                          <div className="font-medium">
-                            {f.folder || "(untitled)"}
-                          </div>
-                          <div className="text-xs text-gray-500">
-                            {f.docs || 0} documents
-                          </div>
+                          <div className="font-medium">{f.folder || "(untitled)"}</div>
+                          <div className="text-xs text-gray-500">{f.docs || 0} documents</div>
                         </div>
                       </div>
                     </div>
@@ -353,16 +370,12 @@ export default function EditBotPage() {
               <div style={{ width: "45%" }} className="p-4">
                 <div className="mb-3">
                   <div className="font-medium">Selected Folders</div>
-                  <div className="text-sm text-gray-500">
-                    {selected.length} folders • {selectedDocsCount} documents
-                  </div>
+                  <div className="text-sm text-gray-500">{selected.length} folders • {selectedDocsCount} documents</div>
                 </div>
 
                 <div className="space-y-2 max-h-72 overflow-auto">
                   {selected.length === 0 && (
-                    <div className="text-sm text-gray-500">
-                      No folders selected.
-                    </div>
+                    <div className="text-sm text-gray-500">No folders selected.</div>
                   )}
                   {selected.map((s) => (
                     <div
@@ -371,9 +384,7 @@ export default function EditBotPage() {
                     >
                       <div>
                         <div className="font-medium">{s.folder}</div>
-                        <div className="text-xs text-gray-500">
-                          {s.docs || 0} documents
-                        </div>
+                        <div className="text-xs text-gray-500">{s.docs || 0} documents</div>
                       </div>
                       <div>
                         <button
